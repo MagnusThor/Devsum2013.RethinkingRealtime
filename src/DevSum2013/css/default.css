@@ -1,0 +1,12 @@
+﻿
+#me {
+    max-width: 300px;
+    margin: 10px;
+}
+
+#videos video {
+    float: left;
+    margin: 10px;
+    max-width: 300px;
+    border-top: 1px solid #dadada;
+}

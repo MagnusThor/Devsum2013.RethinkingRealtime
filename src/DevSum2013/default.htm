@@ -1,0 +1,110 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>DevSum 2013 Demo by Magnus Thor </title>
+    <link href="css/default.css" rel="stylesheet" />
+</head>
+<body>
+    <h1>Devsum 2013 | Demo</h1>
+    <div>
+        <video id="me" autoplay></video>
+    </div>
+    <div id="videos"></div>
+    <div id="msgs"></div>
+    <button id="send">Send</button>
+</body>
+
+<!-- referenser -->
+<script src="Scripts/jquery-1.9.1.js"></script>
+<script src="Scripts/jXSockets.2.3.js"></script>
+<script src="Scripts/jXSockets.WebRTC.0.9.3.min.js"></script>
+<script>
+
+    var staticContext = "701a41cd80b44682a286c59f3dd6a5d3";
+
+    var ws, rtc;
+
+    // Have a look at the call manager for futher information how you
+    // share a context instead of using the staticContext as shown in 
+    // this example.
+    // Also have a look at http://xsockets.net for more info
+    // http://xsockets.net/blog/tutorial-building-a-multivideo-chat-with-webrtc
+
+    $(function () {
+
+        // Connect to the PeerBroker hosted by the "local" XSockets.NET server
+        ws = new XSockets.WebSocket("ws://127.0.0.1:4502/PeerBroker");
+
+
+        // Make sure we are connected to the broker (XSockets.NET ) , then
+        // do the stuff..
+        ws.bind(XSockets.Events.open, function (connection) {
+            console.log("connection", connection);
+
+            // Create a new RTC Helper (object ) - note that we pass
+            // the PeerBroker (ws) for signaling etc..
+
+            rtc = new XSockets.WebRTC(ws);
+
+            // We got a new PeerCOonnection, attach a subscription for
+            // the RTCDataChannel using the DM topic.
+            rtc.bind(XSockets.WebRTC.Events.onPeerConnectionCreated, function (peer) {
+                rtc.channelSubscribe("dm", peer.StorageGuid, function (msg) {
+                    $("<p>").text(msg.Text).appendTo("#msgs");
+                });
+            });
+
+            // Got a local stream, attach it to the video element representing you!
+            rtc.bind(XSockets.WebRTC.Events.onlocalStream, function (s) {
+
+                attachMediaStream(document.querySelector("#me"), s);
+
+            });
+
+            // Yes, we lost one of the remote peers, clean the DOM (remove the video )
+            rtc.bind(XSockets.WebRTC.Events.onPeerConnectionLost, function (peer) {
+                console.log("Lost a Peer");
+                $("video[id='" + peer.StorageGuid + "']").remove();
+            });
+
+
+            // We got a remote stream, create a new video element and append
+            // it to the DOM
+            rtc.bind(XSockets.WebRTC.Events.onRemoteStream, function (evt) {
+                var r = $("<video>").attr({ autoplay: "autoplay", id: evt.StorageGuid });
+
+                attachMediaStream($(r).get(0), evt.MediaStreamEvent.stream);
+
+                $("#videos").prepend(r);
+
+            });
+
+            // We got a context, we are not doing any special thing with it at all..
+            rtc.bind(XSockets.WebRTC.Events.onContextCreated, function (ctx) {
+                console.log("ctx", ctx);
+            });
+
+
+
+            // Get access to the local mediastream's audio / video
+            rtc.getUserMedia({ audio: true, video: true }, function () {
+                rtc.ready();
+                rtc.changeContext(staticContext);
+
+            });
+
+        });
+
+        // Send a message to the remotePeers using RTCDataCannels using the
+        // dm topic.
+        $("#send").bind("click", function () {
+            rtc.channelPublish("dm", { Text: "Hello DevSum, time to party?" });
+        });
+
+    });
+
+
+</script>
+
+
+</html>
