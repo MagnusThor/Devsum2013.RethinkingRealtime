@@ -1,4 +1,4 @@
-# Devsum2013.RethinkingRealtime ( WebRTC and more )
+# Devsum2013.RethinkingRealtime
 
 ## About
 
